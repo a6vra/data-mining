@@ -1,0 +1,56 @@
+version: "3"
+# --------------------------------------------------------------------------------------------------
+# NETWORKS
+networks:
+  cs482:
+    name: cs482
+
+#VOLUMES 
+volumes:
+  myapp:
+    external: true
+# --------------------------------------------------------------------------------------------------
+# SERVICE FOR HANDSON-ML3 CONTAINER 
+services:
+  handson-ml3:
+    build:
+      context: ../
+      dockerfile: ./docker/Dockerfile #Dockerfile.gpu
+      args:
+        - username=devel
+        - userid=1000
+    container_name: handson-ml3
+    image: ageron/handson-ml3:latest #latest-gpu
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 50m
+    ports:
+      - "8888:8888"
+      - "6006:6006"
+      - "3000:3000" #dagster
+    volumes: # new addition for assignment 2A
+      - ../:/home/devel/handson-ml3 
+    command: /opt/conda/envs/homl3/bin/jupyter notebook --ip='0.0.0.0' --port=8888 --no-browser
+    networks: ["cs482"]  # new addition for assignment 2A
+# --------------------------------------------------------------------------------------------------
+  # ADDING SERVICE TO GENERATE APP CONTAINER
+  nats:
+    container_name: app
+    image: nats
+    ports:
+      - "8222:8222"
+      - "4223:4223"
+      - "6222:6222" #jetstream 
+    volumes:
+      - myapp:/var/lib/docker/volumes/myapp/_data
+    command: "--http_port 8222 -js --server_name APP" #"--cluster_name NATS --cluster nats://0.0.0.0:6222 --http_port 8222 -js --server_name  APP" #-js --server_name APP
+    networks: ["cs482"]
+
+   
+    #deploy:
+    #  resources:
+    #    reservations:
+    #      devices:
+    #      - capabilities: [gpu]
